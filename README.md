@@ -3,7 +3,7 @@ This is the REST API the Oomph authenticator will use in the near future to auth
 that wish to use the Oomph proxy. This will be replacing the authentication server, which would end up
 being a hassle to maintain. The reasons this API is public is
 
-1. To make an open-source project that [I](https://www.github.com/ethaniccc) am able to put on my porfolio.
+1. To make an open-source project that [I](https://www.github.com/ethaniccc) am able to put on my portfolio.
 2. To ensure that Oomph's authentication is not secure only through obscurity.
 
 ## Exploit/Bug Finds
