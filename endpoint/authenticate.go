@@ -5,8 +5,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/oomph-ac/api/database"
 	"github.com/oomph-ac/api/endpoint/types"
 	"github.com/oomph-ac/api/errors"
+	"github.com/oomph-ac/api/jwt"
 	"github.com/oomph-ac/api/utils"
 )
 
@@ -16,7 +18,7 @@ const (
 
 // Authenticate is the HTTP endpoint for giving authentication tokens to Oomph clients. These
 // authentication tokens are used to access other endpoints, mainly resources such as detections,
-// and other
+// configuration, etc.
 func Authenticate(w http.ResponseWriter, r *http.Request) {
 	// Though this should never happen - better to be safe than sorry.
 	defer utils.CaptureAndRecover(r, PathAuthentication)
@@ -56,17 +58,32 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate that the fields in the authentication request are valid. If they are not,
-	// then we discard it.
-	if !request.Validate() {
-		utils.EndpointWarning(r, PathAuthentication, "fields in auth request are invalid")
-		w.WriteHeader(http.StatusBadRequest)
+	// Create a new JSON encoder for the HTTP response.
+	enc := json.NewEncoder(w)
+
+	// Obtain the authentication data from the database.
+	res, err := database.ObtainAuth(request.Key)
+	if err != nil {
+		w.WriteHeader(err.StatusCode())
+		enc.Encode(types.NewErrorResponse(err.Message))
+		utils.EndpointError(r, err, PathAuthentication)
 		return
 	}
 
-	// TODO: Make a request to the database for the authentication data.
+	// Create a JWT token that contains claims for this authentication request.
+	token, tkErr := jwt.NewAuthToken(res.Key, r.Header.Get("CF-Connecting-IP"))
+	if tkErr != nil {
+		err = errors.New(
+			errors.APIInternalServer,
+			"cannot create JWT token",
+			tkErr,
+		)
+		w.WriteHeader(err.StatusCode())
+		enc.Encode(types.NewErrorResponse(err.Message))
+		utils.EndpointError(r, err, PathAuthentication)
+		return
+	}
 
-	// Send a response back to the client.
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("{\"message\": \"You made it here! What now?\"}"))
+	enc.Encode(types.AuthResponse{Token: token})
 }

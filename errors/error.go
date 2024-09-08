@@ -1,10 +1,17 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
 
 const (
-	APIUncaught byte = iota
+	APIUserFault byte = iota
 	APIInternalServer
+	APITimedOut
+	APINoCapacity
+	APIUnexpectedValue
+	APIDatabaseFailed
 )
 
 // APIError is the underlying error struct for when the API encounters an error.
@@ -35,4 +42,19 @@ func (err *APIError) Error() string {
 	}
 
 	return e
+}
+
+func (err *APIError) StatusCode() int {
+	switch err.Type {
+	case APIUserFault:
+		return http.StatusUnauthorized
+	case APIInternalServer, APIUnexpectedValue, APIDatabaseFailed:
+		return http.StatusInternalServerError
+	case APITimedOut:
+		return http.StatusRequestTimeout
+	case APINoCapacity:
+		return http.StatusServiceUnavailable
+	default:
+		return http.StatusTeapot
+	}
 }

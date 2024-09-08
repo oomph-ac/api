@@ -17,9 +17,10 @@ func main() {
 
 	go func() {
 		hostAddr := os.Args[1]
-		log.Info().Msg("Oomph REST API serving on " + hostAddr)
+		log.Info().Msg("Oomph API serving on " + hostAddr)
 
 		http.HandleFunc(endpoint.PathAuthentication, endpoint.Authenticate)
+
 		if err := http.ListenAndServe(hostAddr, http.DefaultServeMux); err != nil {
 			panic(err)
 		}
