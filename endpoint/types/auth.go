@@ -11,6 +11,9 @@ type AuthRequest struct {
 type AuthResponse struct {
 	// Token is the authentication token the Oomph client must use for all other
 	Token string `json:"token"`
+	// RefreshAt is the time where the client should attempt to refresh this JWT token
+	// at. This is because the token we send is only valid for a short amount of time.
+	RefreshAt int64 `json:"refreshAt"`
 }
 
 // DBAuthData is the structure of the Oomph authentication data retrieved from the database.

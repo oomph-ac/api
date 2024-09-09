@@ -16,10 +16,9 @@ var secretKey []byte
 // no longer be valid.
 func NewAuthToken(key, addr string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"addr":         addr,
-		"key":          key,
-		"tryRefreshAt": time.Now().Add(time.Minute * 30),
-		"exp":          time.Now().Add(time.Hour),
+		"addr": addr,
+		"key":  key,
+		"exp":  time.Now().Add(time.Hour),
 	})
 
 	tokenString, err := token.SignedString(secretKey)

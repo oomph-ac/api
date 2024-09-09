@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/oomph-ac/api/database"
 	"github.com/oomph-ac/api/endpoint/types"
@@ -85,5 +86,8 @@ func Authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	enc.Encode(types.AuthResponse{Token: token})
+	enc.Encode(types.AuthResponse{
+		Token:     token,
+		RefreshAt: time.Now().Add(time.Minute * 15).Unix(),
+	})
 }
