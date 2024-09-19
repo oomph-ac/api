@@ -5,7 +5,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/oomph-ac/api/endpoint"
+	"github.com/getsentry/sentry-go"
+	_ "github.com/oomph-ac/api/endpoint"
 	"github.com/rs/zerolog/log"
 )
 
@@ -15,11 +16,18 @@ func main() {
 		return
 	}
 
+	// Initalize sentry if enabled.
+	if dsn := os.Getenv("SENTRY_DSN"); dsn != "" {
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn: dsn,
+		}); err != nil {
+			panic(err)
+		}
+	}
+
 	go func() {
 		hostAddr := os.Args[1]
 		log.Info().Msg("Oomph API serving on " + hostAddr)
-
-		http.HandleFunc(endpoint.PathAuthentication, endpoint.Authenticate)
 
 		if err := http.ListenAndServe(hostAddr, http.DefaultServeMux); err != nil {
 			panic(err)

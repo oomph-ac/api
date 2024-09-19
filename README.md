@@ -4,10 +4,10 @@ that wish to use the Oomph proxy. This will be replacing the authentication serv
 being a hassle to maintain. The reasons this API is public is
 
 1. To make an open-source project that [I](https://www.github.com/ethaniccc) am able to put on my portfolio.
-2. To ensure that Oomph's authentication is not secure only through obscurity.
+2. To put more stress on me to ensure this API isn't exploitable.
 
 ## Exploit/Bug Finds
-If you find a bug or exploit in the API, please feel free to DM me on Discord `@ethaniccc`. I'm a broke college student at the moment, but I'd be willing to compensate you if your exploit is legitimate and effective :)
+If you find a bug or exploit in the API, please feel free to DM me on Discord `@ethaniccc`. I'm a broke college student at the moment, but I'd be willing to compensate you if your exploit is legitimate and effective :D
 
 ## Preventing MiTM Exploits on the Authenticator
 Because this project is open-source, some bad actors may attempt to clone this repository in attempt to host their own authentication servers and use Oomph without permission. To prevent MiTM exploits, we verify the API's SSL certificate on the authenticator.

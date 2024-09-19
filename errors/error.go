@@ -7,7 +7,8 @@ import (
 
 const (
 	APIUserFault byte = iota
-	APIInternalServer
+	APIUserFaultNeedsLog
+	APIServerFault
 	APITimedOut
 	APINoCapacity
 	APIUnexpectedValue
@@ -46,15 +47,15 @@ func (err *APIError) Error() string {
 
 func (err *APIError) StatusCode() int {
 	switch err.Type {
-	case APIUserFault:
+	case APIUserFault, APIUserFaultNeedsLog:
 		return http.StatusUnauthorized
-	case APIInternalServer, APIUnexpectedValue, APIDatabaseFailed:
+	case APIServerFault, APIUnexpectedValue, APIDatabaseFailed:
 		return http.StatusInternalServerError
 	case APITimedOut:
 		return http.StatusRequestTimeout
 	case APINoCapacity:
 		return http.StatusServiceUnavailable
 	default:
-		return http.StatusTeapot
+		return http.StatusUnauthorized
 	}
 }

@@ -1,3 +1,4 @@
 api
 .env
 jwt/JWT_MASTER_KEY
+jwt/OOMPH_CLIENT_JWT_KEY

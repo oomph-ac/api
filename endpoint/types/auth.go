@@ -1,5 +1,9 @@
 package types
 
+const (
+	HeaderAuthToken = "X-AuthToken"
+)
+
 // AuthRequest is the request the Oomph client sends when it wants to authenticate with the API.
 type AuthRequest struct {
 	// Key is the authentication key of the client. This key should have

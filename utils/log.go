@@ -3,6 +3,7 @@ package utils
 import (
 	"net/http"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/oomph-ac/api/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -10,7 +11,7 @@ import (
 // EndpointWarning is used when a certain API endpoint wants to log a warning. These warnings should be
 // used when there is an invalid request, or a rejected request.
 func EndpointWarning(r *http.Request, endpoint, msg string) {
-	log.Warn().Str("endpoint", endpoint).Str("ip", r.Header.Get("CF-Connecting-IP")).Msg(msg)
+	log.Warn().Str("endpoint", endpoint).Str("ip", ClientIP(r)).Msg(msg)
 }
 
 // EndpointError is used when a certain API endpoint encounters an error. This function will log the error,
@@ -20,6 +21,12 @@ func EndpointError(r *http.Request, err *errors.APIError, endpoint string) {
 	if err.Type == errors.APIUserFault {
 		return
 	}
+	log.Error().Str("endpoint", endpoint).Str("ip", ClientIP(r)).Msg(err.Error())
 
-	log.Error().Err(err).Str("endpoint", endpoint).Str("ip", r.Header.Get("CF-Connecting-IP"))
+	if err.Type != errors.APIUserFaultNeedsLog {
+		hub := sentry.CurrentHub().Clone()
+		hub.Scope().SetTag("endpoint", endpoint)
+		hub.Scope().SetTag("client", ClientIP(r))
+		hub.Recover(err)
+	}
 }
