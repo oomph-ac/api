@@ -15,6 +15,6 @@ func CaptureAndRecover(w http.ResponseWriter, r *http.Request, endpoint string) 
 	if v := recover(); v != nil {
 		EndpointError(r, errors.New(errors.APIServerFault, endpoint+" crashed", v), endpoint)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("{\"message\": \"crashed, no further info\"}"))
+		w.Write([]byte("{\"message\": \"crash occurred when processing request, no further info\"}"))
 	}
 }

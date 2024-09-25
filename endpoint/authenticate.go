@@ -133,6 +133,7 @@ func VerifySession(w http.ResponseWriter, r *http.Request) {
 	if _, err := jwt.ValidateAuthToken(token, utils.ClientIP(r)); err != nil {
 		utils.EndpointError(r, err, PathVerifySession)
 		w.WriteHeader(err.StatusCode())
+		json.NewEncoder(w).Encode(types.NewErrorResponse(err.Message))
 		return
 	}
 	w.WriteHeader(http.StatusOK)

@@ -6,6 +6,10 @@ import (
 )
 
 const (
+	MessageKeyInvalidatedDueToMalice = "Your authentication key has been revoked for malicious activity on the API. Per the terms of the TOS, you are not eligible for a refund."
+)
+
+const (
 	APIUserFault byte = iota
 	APIUserFaultNeedsLog
 	APIServerFault
@@ -22,24 +26,24 @@ type APIError struct {
 	Type byte
 	// Message is the message of the error.
 	Message string
-	// UnderlyingErr is the error that may have caused this error to be created. This is mainly used
+	// Underlying is the error that may have caused this error to be created. This is mainly used
 	// when a function recovers, and we don't know what type the recover is.
-	UnderlyingErr any
+	Underlying any
 }
 
 // New returns a new APIError
 func New(t byte, msg string, uErr any) *APIError {
 	return &APIError{
-		Type:          t,
-		Message:       msg,
-		UnderlyingErr: uErr,
+		Type:       t,
+		Message:    msg,
+		Underlying: uErr,
 	}
 }
 
 func (err *APIError) Error() string {
 	e := fmt.Sprintf("%s (%d)", err.Message, err.Type)
-	if err.UnderlyingErr != nil {
-		e += fmt.Sprintf(": %v", err.UnderlyingErr)
+	if err.Underlying != nil {
+		e += fmt.Sprintf(": %v", err.Underlying)
 	}
 
 	return e

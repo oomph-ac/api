@@ -11,47 +11,47 @@ import (
 )
 
 const (
-	statementFindBinary = "SELECT data FROM oomph_bins WHERE (os=$os && arch=$arch);"
+	statementFindBinary = "SELECT data FROM oomph_bins WHERE (os=$os && arch=$arch && branch=$branch);"
 )
 
-// SearchForBinary searches for a binary in the database and
-func SearchForBinary(os, arch string) (string, *errors.APIError) {
-	res, err := RunJob(func() interface{} {
-		keys := internal.InfoPool.Get().(map[string]any)
-		defer internal.InfoPool.Put(keys)
+// UpdateBinary updates the current Oomph binary data in the database.
+func UpdateBinary(os, arch, branch, data string) *errors.APIError {
+	return nil
+}
 
-		maps.Clear(keys)
-		keys["os"], keys["arch"] = os, arch
+// SearchForBinary searches for a binary in the database and returns the data if the
+// specified binary type is found. An error is returned if the binary could not be found.
+// We always want to send the latest binary in the database, don't cache results.
+func SearchForBinary(os, arch, branch string) (string, *errors.APIError) {
+	keys := internal.InfoPool.Get().(map[string]any)
+	defer internal.InfoPool.Put(keys)
 
-		dbRes, dbErr := DB.Query(statementFindBinary, keys)
-		if dbErr != nil {
-			return errors.New(
-				errors.APIDatabaseFailed,
-				"database query failed",
-				dbErr,
-			)
-		}
+	maps.Clear(keys)
+	keys["os"], keys["arch"], keys["branch"] = os, arch, branch
 
-		var results []types.DBProxyBinaryResponse
-		if found, err := surrealdb.UnmarshalRaw(dbRes, &results); err != nil {
-			return errors.New(
-				errors.APIDatabaseFailed,
-				"unable to parse response from database",
-				err,
-			)
-		} else if !found {
-			return errors.New(
-				errors.APIUserFaultNeedsLog,
-				fmt.Sprintf("could not find binary for binary %s_%s", os, arch),
-				nil,
-			)
-		}
-
-		return results[0].Data
-	})
-
-	if err != nil {
-		return "", err
+	dbRes, dbErr := DB.Query(statementFindBinary, keys)
+	if dbErr != nil {
+		return "", errors.New(
+			errors.APIDatabaseFailed,
+			"database query failed",
+			dbErr,
+		)
 	}
-	return res.(string), nil
+
+	var results []types.DBProxyBinaryResponse
+	if found, err := surrealdb.UnmarshalRaw(dbRes, &results); err != nil {
+		return "", errors.New(
+			errors.APIDatabaseFailed,
+			"unable to parse response from database",
+			err,
+		)
+	} else if !found {
+		return "", errors.New(
+			errors.APIUserFaultNeedsLog,
+			fmt.Sprintf("could not find binary for binary %s_%s_%s", os, arch, branch),
+			nil,
+		)
+	}
+
+	return results[0].Data, nil
 }

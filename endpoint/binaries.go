@@ -8,17 +8,20 @@ import (
 	"github.com/oomph-ac/api/database"
 	"github.com/oomph-ac/api/endpoint/types"
 	"github.com/oomph-ac/api/errors"
+	"github.com/oomph-ac/api/internal"
 	"github.com/oomph-ac/api/jwt"
 	"github.com/oomph-ac/api/utils"
+	"golang.org/x/exp/maps"
 )
 
 const (
-	PathDownloadProxy = "/binaries/download"
-	PathUploadProxy   = "/binaries/upload"
+	PathDownloadProxy = "/binary/download"
+	PathUploadProxy   = "/binary/upload"
 )
 
 func init() {
 	http.HandleFunc(PathDownloadProxy, DownloadProxy)
+	http.HandleFunc(PathUploadProxy, UploadProxy)
 }
 
 // DownloadProxy is the endpoint meant to be reached by the Oomph authenticator to download an
@@ -79,7 +82,7 @@ func DownloadProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Search for the binary data from the database.
-	binData, dbErr := database.SearchForBinary(req.OS, req.Arch)
+	binData, dbErr := database.SearchForBinary(req.OS, req.Arch, req.Branch)
 	if dbErr != nil {
 		utils.EndpointError(r, dbErr, PathDownloadProxy)
 		return
@@ -89,4 +92,77 @@ func DownloadProxy(w http.ResponseWriter, r *http.Request) {
 	enc.Encode(types.ProxyDownloadResponse{
 		Data: binData,
 	})
+}
+
+// UploadProxy is the endpoint meant to be reached by an internal tool to update binaries stored
+// on the database. This endpoint requires an authentication JWT where the admin field is set to true
+// which can be obtained via. the authentication endpoint. If an attempt to make an upload without
+// having the sufficient permissions is made, the authentication key in question will be revoked.
+func UploadProxy(w http.ResponseWriter, r *http.Request) {
+	defer utils.CaptureAndRecover(w, r, PathUploadProxy)
+	enc := json.NewEncoder(w)
+
+	// Check that this is a POST request.
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := r.Header.Get(types.HeaderAuthToken)
+	if token == "" {
+		w.WriteHeader(http.StatusForbidden)
+		enc.Encode(types.NewErrorResponse("missing " + types.HeaderAuthToken + " from header"))
+		return
+	}
+
+	// Validate the authentication token given to us in the header.
+	claims, err := jwt.ValidateAuthToken(token, utils.ClientIP(r))
+	if err != nil {
+		w.WriteHeader(err.StatusCode())
+		enc.Encode(types.NewErrorResponse(err.Message))
+		return
+	}
+
+	// Ensure that in the claims, the admin field is set to true. If a non-admin is trying to
+	// upload a binary for whatever reason, say bye-bye to your authentication key - no refunds :>
+	if !claims.Admin {
+		data := internal.InfoPool.Get().(map[string]any)
+		defer internal.InfoPool.Put(data)
+
+		maps.Clear(data)
+		data["key"] = claims.OomphKey
+
+		database.DB.Query("DELETE oomphAuth WHERE key=$key;", data)
+		w.WriteHeader(http.StatusTeapot)
+		enc.Encode(types.NewErrorResponse(errors.MessageKeyInvalidatedDueToMalice))
+		return
+	}
+
+	dat, ioErr := io.ReadAll(r.Body)
+	if ioErr != nil {
+		utils.EndpointError(r, errors.New(
+			errors.APIServerFault,
+			"failed to read body of HTTP request",
+			ioErr,
+		), PathUploadProxy)
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(types.NewErrorResponse("failed to read request data"))
+		return
+	}
+
+	var req types.ProxyUploadRequest
+	if err := json.Unmarshal(dat, &req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		enc.Encode(types.NewErrorResponse("invalid request"))
+		return
+	}
+
+	if err := database.UpdateBinary(req.OS, req.Arch, req.Branch, req.Data); err != nil {
+		utils.EndpointError(r, err, PathUploadProxy)
+		w.WriteHeader(err.StatusCode())
+		enc.Encode(types.NewErrorResponse(err.Message))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
